@@ -10,7 +10,7 @@ logger = logging.getLogger(__name__)
 
 import os
 import time
-
+import random
 # the secret configuration specific things
 if bool(os.environ.get("WEBHOOK", False)):
     from sample_config import Config
@@ -23,7 +23,7 @@ from translation import Translation
 import pyrogram
 logging.getLogger("pyrogram").setLevel(logging.WARNING)
 from pyrogram import Client, Filters
-
+from helper_funcs.help_Nekmo_ffmpeg import take_screen_shot
 from helper_funcs.chat_base import TRChatBase
 from helper_funcs.display_progress import progress_for_pyrogram
 
@@ -88,9 +88,21 @@ async def rename_video(bot, update):
                 message_id=b.message_id
                 )
             logger.info(the_real_download_location)
+            width = 0
+            height = 0
+            duration = 0
+            metadata = extractMetadata(createParser(new_file_name))
+            try:
+             if metadata.has("duration"):
+                duration = metadata.get('duration').seconds
+            except:
+              pass
             thumb_image_path = Config.DOWNLOAD_LOCATION + "/" + str(update.from_user.id) + ".jpg"
             if not os.path.exists(thumb_image_path):
-                thumb_image_path = None
+               try:
+                    thumb_image_path = await take_screen_shot(new_file_name, os.path.dirname(new_file_name), random.randint(0, duration - 1))
+               except:
+                    thumb_image_path = None
             else:
                 width = 0
                 height = 0
@@ -113,6 +125,7 @@ async def rename_video(bot, update):
             await bot.send_video(
                 chat_id=update.chat.id,
                 video=new_file_name,
+                duration=duration,
                 thumb=thumb_image_path,
                 caption=description,
                 # reply_markup=reply_markup,
